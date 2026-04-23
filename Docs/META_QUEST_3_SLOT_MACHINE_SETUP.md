@@ -60,6 +60,7 @@ Each slot should have:
    - assign optional in-world text labels for selected slot, credits, and result
    - assign `controlAudioSource` and `ambientAudioSource` for per-theme audio layers
    - assign `cabinetLights` for dynamic theme-linked and payout-reactive lighting pulses
+   - assign low/medium/high particle burst systems and emissive renderers for payout-tier FX
 8. (Optional legacy UI) Add a world-space canvas panel with:
    - `QuestSlotSelectorPanel`
    - button template + container root
@@ -138,6 +139,22 @@ Each `VideoSlotDefinition` includes light tuning fields:
 
 `QuestPhysicalSlotConsole` maps these to `cabinetLights` and scales pulse intensity by payout size.
 
+## Payout-tier synchronized particles and emissive animation
+
+`QuestPhysicalSlotConsole` supports payout-tier FX synchronized with win events:
+
+- **Particles**
+  - `lowTierBurst`
+  - `mediumTierBurst`
+  - `highTierBurst`
+- **Emissive material pulse**
+  - assign `emissiveRenderers`
+  - configure shader property (`_EmissionColor` by default)
+  - tune `emissiveBaseColor`, `emissiveAccentColor`, and `emissivePulseDuration`
+- **Tier thresholds**
+  - based on win multiple (`totalWin / currentBet`)
+  - controlled by `lowTierMultiplier`, `mediumTierMultiplier`, and `highTierMultiplier`
+
 ## Next recommended upgrades
 
-- Add synchronized particle bursts and emissive material animation tied to payout tier.
+- Add spatialized announcer VO and reactive music stems tied to payout tier.

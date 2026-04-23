@@ -32,6 +32,18 @@ namespace MyCasino.Slots.VR
         [SerializeField] private AudioSource ambientAudioSource;
         [Header("Theme Lighting")]
         [SerializeField] private Light[] cabinetLights;
+        [Header("Payout FX")]
+        [SerializeField] private ParticleSystem lowTierBurst;
+        [SerializeField] private ParticleSystem mediumTierBurst;
+        [SerializeField] private ParticleSystem highTierBurst;
+        [SerializeField] private Renderer[] emissiveRenderers;
+        [SerializeField] private string emissionColorProperty = "_EmissionColor";
+        [SerializeField] private Color emissiveBaseColor = Color.black;
+        [SerializeField] private Color emissiveAccentColor = Color.white;
+        [SerializeField, Min(0.01f)] private float emissivePulseDuration = 0.3f;
+        [SerializeField, Min(1f)] private float lowTierMultiplier = 1.5f;
+        [SerializeField, Min(1f)] private float mediumTierMultiplier = 4f;
+        [SerializeField, Min(1f)] private float highTierMultiplier = 8f;
         [Header("Button/Lever Motion")]
         [SerializeField] private Transform spinControlVisual;
         [SerializeField] private Transform nextControlVisual;
@@ -44,6 +56,8 @@ namespace MyCasino.Slots.VR
         [SerializeField, Range(0f, 1f)] private float winHapticAmplitude = 0.7f;
         [SerializeField, Min(0f)] private float winHapticDuration = 0.18f;
         private Coroutine _lightPulseRoutine;
+        private Coroutine _emissivePulseRoutine;
+        private readonly MaterialPropertyBlock _emissivePropertyBlock = new();
 
         private void OnEnable()
         {
@@ -108,6 +122,14 @@ namespace MyCasino.Slots.VR
                 StopCoroutine(_lightPulseRoutine);
                 _lightPulseRoutine = null;
             }
+
+            if (_emissivePulseRoutine != null)
+            {
+                StopCoroutine(_emissivePulseRoutine);
+                _emissivePulseRoutine = null;
+            }
+
+            SetEmissiveColor(emissiveBaseColor);
         }
 
         public void TrySpin()
@@ -198,6 +220,7 @@ namespace MyCasino.Slots.VR
                 SendHapticsToSelectingInteractors(spinControl, winHapticAmplitude, winHapticDuration);
                 PlayControlClip(GetCurrentSlotDefinition()?.WinStingerSfx);
                 PulseThemeLights(result);
+                TriggerPayoutFx(result);
             }
 
             RefreshHud();
@@ -276,6 +299,8 @@ namespace MyCasino.Slots.VR
                 lightRef.color = definition.ThemeLightColor;
                 lightRef.intensity = definition.ThemeBaseLightIntensity;
             }
+
+            SetEmissiveColor(Color.Lerp(emissiveBaseColor, definition.ThemeLightColor, 0.3f));
         }
 
         private void PulseThemeLights(SlotSpinResult result)
@@ -338,6 +363,113 @@ namespace MyCasino.Slots.VR
 
                 lightRef.color = color;
                 lightRef.intensity = intensity;
+            }
+        }
+
+        private void TriggerPayoutFx(SlotSpinResult result)
+        {
+            var tier = DeterminePayoutTier(result.TotalWinAmount);
+            switch (tier)
+            {
+                case PayoutTier.High:
+                    PlayBurst(highTierBurst);
+                    break;
+                case PayoutTier.Medium:
+                    PlayBurst(mediumTierBurst);
+                    break;
+                default:
+                    PlayBurst(lowTierBurst);
+                    break;
+            }
+
+            if (_emissivePulseRoutine != null)
+            {
+                StopCoroutine(_emissivePulseRoutine);
+            }
+
+            _emissivePulseRoutine = StartCoroutine(PulseEmissiveRoutine(tier));
+        }
+
+        private PayoutTier DeterminePayoutTier(int totalWinAmount)
+        {
+            if (machine == null || machine.CurrentBet <= 0)
+            {
+                return PayoutTier.Low;
+            }
+
+            var winMultiple = totalWinAmount / (float)machine.CurrentBet;
+            if (winMultiple >= highTierMultiplier)
+            {
+                return PayoutTier.High;
+            }
+
+            if (winMultiple >= mediumTierMultiplier)
+            {
+                return PayoutTier.Medium;
+            }
+
+            return PayoutTier.Low;
+        }
+
+        private static void PlayBurst(ParticleSystem burst)
+        {
+            if (burst == null)
+            {
+                return;
+            }
+
+            burst.Play();
+        }
+
+        private IEnumerator PulseEmissiveRoutine(PayoutTier tier)
+        {
+            var tierIntensity = tier switch
+            {
+                PayoutTier.High => 2.8f,
+                PayoutTier.Medium => 1.8f,
+                _ => 1.2f
+            };
+
+            var peakColor = emissiveAccentColor * tierIntensity;
+            var elapsed = 0f;
+            while (elapsed < emissivePulseDuration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / emissivePulseDuration);
+                SetEmissiveColor(Color.Lerp(emissiveBaseColor, peakColor, t));
+                yield return null;
+            }
+
+            elapsed = 0f;
+            while (elapsed < emissivePulseDuration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / emissivePulseDuration);
+                SetEmissiveColor(Color.Lerp(peakColor, emissiveBaseColor, t));
+                yield return null;
+            }
+
+            SetEmissiveColor(emissiveBaseColor);
+            _emissivePulseRoutine = null;
+        }
+
+        private void SetEmissiveColor(Color color)
+        {
+            if (emissiveRenderers == null || emissiveRenderers.Length == 0 || string.IsNullOrWhiteSpace(emissionColorProperty))
+            {
+                return;
+            }
+
+            foreach (var rendererRef in emissiveRenderers)
+            {
+                if (rendererRef == null)
+                {
+                    continue;
+                }
+
+                rendererRef.GetPropertyBlock(_emissivePropertyBlock);
+                _emissivePropertyBlock.SetColor(emissionColorProperty, color);
+                rendererRef.SetPropertyBlock(_emissivePropertyBlock);
             }
         }
 
@@ -424,6 +556,13 @@ namespace MyCasino.Slots.VR
             }
 
             return lobby.VideoSlots[lobby.SelectedIndex];
+        }
+
+        private enum PayoutTier
+        {
+            Low,
+            Medium,
+            High
         }
     }
 }
