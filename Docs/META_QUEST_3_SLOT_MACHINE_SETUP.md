@@ -80,8 +80,16 @@ Each slot should have:
   - Runs a simple random bonus-pick simulation that awards `bet * randomMultiplier`.
   - Multiplier range is controlled by `BonusPayoutMultiplierMin` and `BonusPayoutMultiplierMax`.
 
+## Progressive jackpot tracking
+
+- Every paid spin contributes `bet * ProgressiveContributionPercent` into a shared jackpot pool.
+- Current jackpot value is exposed at runtime via `VideoSlotMachine.ProgressiveJackpotPool`.
+- Jackpot is triggered by landing `JackpotTriggerCount` or more `JackpotTriggerSymbolId` symbols anywhere in the grid.
+- On jackpot hit:
+  - Player receives the entire current pool value.
+  - Pool resets to `ProgressiveJackpotSeed`.
+
 ## Next recommended upgrades
 
-- Add progressive jackpot tracking.
 - Add hand-tracking gestures for spin and slot selection.
 - Replace temporary UI buttons with physical in-world VR controls.

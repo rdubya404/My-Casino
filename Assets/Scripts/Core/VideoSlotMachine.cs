@@ -16,20 +16,24 @@ namespace MyCasino.Slots.Core
         private readonly List<float> _weightLookup = new();
         private bool _isSpinning;
         private int _freeSpinsRemaining;
+        private int _progressiveJackpotPool;
 
         public event Action<VideoSlotMachine> OnSpinStarted;
         public event Action<SlotSpinResult> OnSpinFinished;
         public event Action<VideoSlotMachine> OnBonusMiniGameStarted;
         public event Action<int> OnBonusMiniGameFinished;
+        public event Action<int> OnProgressiveJackpotHit;
 
         public int Credits { get; private set; }
         public int CurrentBet => definition != null ? definition.BetUnit : 0;
         public VideoSlotDefinition Definition => definition;
         public int FreeSpinsRemaining => _freeSpinsRemaining;
+        public int ProgressiveJackpotPool => _progressiveJackpotPool;
 
         private void Awake()
         {
             Credits = initialCredits;
+            _progressiveJackpotPool = definition != null ? Mathf.Max(0, definition.ProgressiveJackpotSeed) : 0;
             RebuildWeightLookup();
         }
 
@@ -38,6 +42,7 @@ namespace MyCasino.Slots.Core
             definition = slotDefinition;
             Credits = Mathf.Max(0, carryCredits);
             _freeSpinsRemaining = 0;
+            _progressiveJackpotPool = definition != null ? Mathf.Max(0, definition.ProgressiveJackpotSeed) : 0;
             RebuildWeightLookup();
         }
 
@@ -61,6 +66,7 @@ namespace MyCasino.Slots.Core
             else
             {
                 Credits -= CurrentBet;
+                AddJackpotContribution();
             }
 
             StartCoroutine(SpinRoutine(usingFreeSpin));
@@ -94,6 +100,8 @@ namespace MyCasino.Slots.Core
             var awardedFreeSpins = GetAwardedFreeSpins(grid);
             var bonusTriggered = IsBonusTriggered(grid);
             var bonusWin = 0;
+            var jackpotTriggered = IsJackpotTriggered(grid);
+            var jackpotWin = 0;
 
             if (awardedFreeSpins > 0)
             {
@@ -108,15 +116,23 @@ namespace MyCasino.Slots.Core
                 OnBonusMiniGameFinished?.Invoke(bonusWin);
             }
 
-            Credits += lineWin + bonusWin;
+            if (jackpotTriggered)
+            {
+                jackpotWin = PayoutProgressiveJackpot();
+                OnProgressiveJackpotHit?.Invoke(jackpotWin);
+            }
+
+            Credits += lineWin + bonusWin + jackpotWin;
 
             var result = new SlotSpinResult(
                 definition.SlotId,
                 CurrentBet,
                 lineWin,
                 bonusWin,
+                jackpotWin,
                 awardedFreeSpins,
                 bonusTriggered,
+                jackpotTriggered,
                 usedFreeSpin,
                 grid);
             OnSpinFinished?.Invoke(result);
@@ -214,6 +230,30 @@ namespace MyCasino.Slots.Core
             var max = Mathf.Max(definition.BonusPayoutMultiplierMin, definition.BonusPayoutMultiplierMax);
             var selectedMultiplier = UnityEngine.Random.Range(min, max + 1);
             return CurrentBet * selectedMultiplier;
+        }
+
+        private void AddJackpotContribution()
+        {
+            var contribution = Mathf.RoundToInt(CurrentBet * definition.ProgressiveContributionPercent);
+            _progressiveJackpotPool += Mathf.Max(0, contribution);
+        }
+
+        private bool IsJackpotTriggered(string[,] grid)
+        {
+            if (string.IsNullOrWhiteSpace(definition.JackpotTriggerSymbolId))
+            {
+                return false;
+            }
+
+            var matches = CountSymbol(grid, definition.JackpotTriggerSymbolId);
+            return matches >= definition.JackpotTriggerCount;
+        }
+
+        private int PayoutProgressiveJackpot()
+        {
+            var payout = _progressiveJackpotPool;
+            _progressiveJackpotPool = Mathf.Max(0, definition.ProgressiveJackpotSeed);
+            return payout;
         }
 
         private int CountSymbol(string[,] grid, string symbolId)

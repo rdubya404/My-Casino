@@ -90,6 +90,11 @@ namespace MyCasino.Slots.VR
                 {
                     resultText.text += $" | Bonus +{result.BonusWinAmount}";
                 }
+
+                if (result.JackpotTriggered)
+                {
+                    resultText.text += $" | JACKPOT +{result.JackpotWinAmount}";
+                }
             }
 
             if (uiAudioSource != null && result.TotalWinAmount > 0 && machine.Definition.WinSfx != null)
@@ -105,6 +110,7 @@ namespace MyCasino.Slots.VR
             if (creditsText != null && machine != null)
             {
                 creditsText.text = $"Credits: {machine.Credits} | Free Spins: {machine.FreeSpinsRemaining}";
+                creditsText.text += $" | Jackpot: {machine.ProgressiveJackpotPool}";
             }
         }
     }

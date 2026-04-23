@@ -32,6 +32,11 @@ namespace MyCasino.Slots.Data
         [field: SerializeField, Min(1)] public int BonusTriggerCount { get; private set; } = 3;
         [field: SerializeField, Min(1)] public int BonusPayoutMultiplierMin { get; private set; } = 2;
         [field: SerializeField, Min(1)] public int BonusPayoutMultiplierMax { get; private set; } = 8;
+        [field: Header("Progressive Jackpot")]
+        [field: SerializeField, Min(0)] public int ProgressiveJackpotSeed { get; private set; } = 10000;
+        [field: SerializeField, Range(0f, 1f)] public float ProgressiveContributionPercent { get; private set; } = 0.05f;
+        [field: SerializeField] public string JackpotTriggerSymbolId { get; private set; } = "jackpot";
+        [field: SerializeField, Min(1)] public int JackpotTriggerCount { get; private set; } = 5;
 
         public bool IsValid => Symbols != null && Symbols.Count > 0 && ReelCount > 0 && RowCount > 0;
     }
