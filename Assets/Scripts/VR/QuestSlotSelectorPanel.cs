@@ -14,8 +14,21 @@ namespace MyCasino.Slots.VR
 
         private void Start()
         {
+            if (lobby != null)
+            {
+                lobby.OnSelectedSlotChanged += HandleSlotChanged;
+            }
+
             BuildButtons();
             RefreshTitle();
+        }
+
+        private void OnDestroy()
+        {
+            if (lobby != null)
+            {
+                lobby.OnSelectedSlotChanged -= HandleSlotChanged;
+            }
         }
 
         private void BuildButtons()
@@ -37,9 +50,13 @@ namespace MyCasino.Slots.VR
                 button.onClick.AddListener(() =>
                 {
                     lobby.SelectSlot(index);
-                    RefreshTitle();
                 });
             }
+        }
+
+        private void HandleSlotChanged(int _)
+        {
+            RefreshTitle();
         }
 
         private void RefreshTitle()

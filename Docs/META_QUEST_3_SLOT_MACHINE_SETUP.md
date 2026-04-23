@@ -53,7 +53,10 @@ Each slot should have:
 7. Add a world-space canvas panel with:
    - `QuestSlotSelectorPanel`
    - button template + container root
-8. Build Settings:
+8. (Optional hand tracking) Add an input controller GameObject with:
+   - `QuestHandGestureController`
+   - references to `VideoSlotMachine` and `SlotLobbyManager`
+9. Build Settings:
    - Platform: Android
    - Texture Compression: ASTC
    - Target Device: Quest 3
@@ -89,7 +92,19 @@ Each slot should have:
   - Player receives the entire current pool value.
   - Pool resets to `ProgressiveJackpotSeed`.
 
+## Hand-tracking gestures (Quest 3)
+
+`QuestHandGestureController` supports gesture-first interaction without button presses:
+
+- **Right-hand pinch (thumb + index):** spin the active slot.
+- **Left-hand pinch + swipe right:** select next slot theme.
+- **Left-hand pinch + swipe left:** select previous slot theme.
+
+Gesture thresholds are configurable in the component:
+- `Pinch Distance Threshold`
+- `Swipe Distance Threshold`
+- `Spin Cooldown Seconds`
+
 ## Next recommended upgrades
 
-- Add hand-tracking gestures for spin and slot selection.
 - Replace temporary UI buttons with physical in-world VR controls.

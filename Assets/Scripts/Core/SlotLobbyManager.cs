@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using MyCasino.Slots.Data;
 using UnityEngine;
@@ -11,6 +12,7 @@ namespace MyCasino.Slots.Core
         [SerializeField] private int defaultSlotIndex;
 
         private int _selectedIndex;
+        public event Action<int> OnSelectedSlotChanged;
 
         public IReadOnlyList<VideoSlotDefinition> VideoSlots => videoSlots;
         public int SelectedIndex => _selectedIndex;
@@ -24,6 +26,7 @@ namespace MyCasino.Slots.Core
 
             _selectedIndex = Mathf.Clamp(defaultSlotIndex, 0, Mathf.Max(0, videoSlots.Count - 1));
             LoadSelectedSlot(machine != null ? machine.Credits : 1000);
+            OnSelectedSlotChanged?.Invoke(_selectedIndex);
         }
 
         public void SelectSlot(int index)
@@ -35,6 +38,29 @@ namespace MyCasino.Slots.Core
 
             _selectedIndex = index;
             LoadSelectedSlot(machine.Credits);
+            OnSelectedSlotChanged?.Invoke(_selectedIndex);
+        }
+
+        public void SelectNextSlot()
+        {
+            if (videoSlots.Count == 0)
+            {
+                return;
+            }
+
+            var next = (_selectedIndex + 1) % videoSlots.Count;
+            SelectSlot(next);
+        }
+
+        public void SelectPreviousSlot()
+        {
+            if (videoSlots.Count == 0)
+            {
+                return;
+            }
+
+            var previous = (_selectedIndex - 1 + videoSlots.Count) % videoSlots.Count;
+            SelectSlot(previous);
         }
 
         private void LoadSelectedSlot(int carryCredits)
