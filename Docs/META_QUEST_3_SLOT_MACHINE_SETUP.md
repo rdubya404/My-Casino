@@ -61,13 +61,16 @@ Each slot should have:
 ## Payout logic currently implemented
 
 - Reels spin left-to-right with per-reel delay.
-- Horizontal paylines are evaluated across each row.
+- Paylines support:
+  - Horizontal rows
+  - Diagonal lines
+  - Zig-zag lines
 - 3+ matching symbols from the leftmost reel pay:
   - `bet * payoutMultiplier * (streak - 2)`
+- `VideoSlotDefinition.Paylines` can override defaults with custom line paths (one row index per reel).
 
 ## Next recommended upgrades
 
-- Add paylines beyond horizontal rows (diagonals, zig-zag).
 - Add free spins and bonus mini-games.
 - Add progressive jackpot tracking.
 - Add hand-tracking gestures for spin and slot selection.

@@ -3,6 +3,13 @@ using UnityEngine;
 
 namespace MyCasino.Slots.Data
 {
+    [System.Serializable]
+    public class PaylinePattern
+    {
+        [field: SerializeField] public string Id { get; private set; } = "line";
+        [field: SerializeField] public int[] ReelRows { get; private set; } = { 1, 1, 1, 1, 1 };
+    }
+
     [CreateAssetMenu(menuName = "MyCasino/Slots/Video Slot Definition", fileName = "VideoSlotDefinition")]
     public class VideoSlotDefinition : ScriptableObject
     {
@@ -15,6 +22,7 @@ namespace MyCasino.Slots.Data
         [field: SerializeField, Min(1)] public int ReelCount { get; private set; } = 5;
         [field: SerializeField, Min(1)] public int RowCount { get; private set; } = 3;
         [field: SerializeField] public List<SlotSymbol> Symbols { get; private set; } = new();
+        [field: SerializeField] public List<PaylinePattern> Paylines { get; private set; } = new();
 
         public bool IsValid => Symbols != null && Symbols.Count > 0 && ReelCount > 0 && RowCount > 0;
     }

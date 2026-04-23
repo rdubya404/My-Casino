@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using MyCasino.Slots.Data;
 using UnityEngine;
 
@@ -112,13 +113,15 @@ namespace MyCasino.Slots.Core
         private int CalculateWin(string[,] grid)
         {
             var win = 0;
-            for (var row = 0; row < definition.RowCount; row++)
+            foreach (var payline in GetActivePaylines())
             {
-                var streakSymbol = grid[0, row];
+                var firstRow = payline[0];
+                var streakSymbol = grid[0, firstRow];
                 var streak = 1;
 
                 for (var reel = 1; reel < definition.ReelCount; reel++)
                 {
+                    var row = payline[reel];
                     if (grid[reel, row] != streakSymbol)
                     {
                         break;
@@ -135,6 +138,76 @@ namespace MyCasino.Slots.Core
             }
 
             return win;
+        }
+
+        private IEnumerable<int[]> GetActivePaylines()
+        {
+            var emittedConfiguredPayline = false;
+            if (definition.Paylines != null && definition.Paylines.Count > 0)
+            {
+                foreach (var configured in definition.Paylines)
+                {
+                    if (configured?.ReelRows == null || configured.ReelRows.Length != definition.ReelCount)
+                    {
+                        continue;
+                    }
+
+                    if (configured.ReelRows.Any(row => row < 0 || row >= definition.RowCount))
+                    {
+                        continue;
+                    }
+
+                    emittedConfiguredPayline = true;
+                    yield return configured.ReelRows;
+                }
+            }
+
+            if (!emittedConfiguredPayline)
+            {
+                foreach (var fallback in BuildDefaultPaylines())
+                {
+                    yield return fallback;
+                }
+            }
+        }
+
+        private IEnumerable<int[]> BuildDefaultPaylines()
+        {
+            // Horizontal paylines.
+            for (var row = 0; row < definition.RowCount; row++)
+            {
+                var line = new int[definition.ReelCount];
+                for (var reel = 0; reel < definition.ReelCount; reel++)
+                {
+                    line[reel] = row;
+                }
+
+                yield return line;
+            }
+
+            if (definition.RowCount < 3 || definition.ReelCount < 3)
+            {
+                yield break;
+            }
+
+            // Diagonals.
+            yield return MirrorPattern(0, 1, 2, 1, 0);
+            yield return MirrorPattern(2, 1, 0, 1, 2);
+
+            // Zig-zags.
+            yield return MirrorPattern(1, 0, 1, 2, 1);
+            yield return MirrorPattern(1, 2, 1, 0, 1);
+        }
+
+        private int[] MirrorPattern(params int[] pattern)
+        {
+            var line = new int[definition.ReelCount];
+            for (var reel = 0; reel < definition.ReelCount; reel++)
+            {
+                line[reel] = pattern[reel % pattern.Length];
+            }
+
+            return line;
         }
 
         private int GetMultiplier(string symbolId)
