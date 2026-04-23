@@ -59,6 +59,7 @@ Each slot should have:
    - tune haptic amplitude/duration for control press and win feedback
    - assign optional in-world text labels for selected slot, credits, and result
    - assign `controlAudioSource` and `ambientAudioSource` for per-theme audio layers
+   - assign `cabinetLights` for dynamic theme-linked and payout-reactive lighting pulses
 8. (Optional legacy UI) Add a world-space canvas panel with:
    - `QuestSlotSelectorPanel`
    - button template + container root
@@ -126,6 +127,17 @@ Each `VideoSlotDefinition` now supports bespoke presentation overrides:
 
 `QuestPhysicalSlotConsole` automatically applies these when slot selection changes.
 
+## Dynamic cabinet lighting presets
+
+Each `VideoSlotDefinition` includes light tuning fields:
+
+- `ThemeLightColor`: base cabinet light color for the slot theme.
+- `ThemeBaseLightIntensity`: default idle light intensity.
+- `ThemeWinLightIntensity`: peak pulse intensity on wins.
+- `ThemeLightPulseDuration`: up/down pulse timing for win reactions.
+
+`QuestPhysicalSlotConsole` maps these to `cabinetLights` and scales pulse intensity by payout size.
+
 ## Next recommended upgrades
 
-- Add dynamic cabinet lighting presets linked to slot theme and payout intensity.
+- Add synchronized particle bursts and emissive material animation tied to payout tier.

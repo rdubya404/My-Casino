@@ -30,6 +30,8 @@ namespace MyCasino.Slots.VR
         [Header("Theme Audio Layers")]
         [SerializeField] private AudioSource controlAudioSource;
         [SerializeField] private AudioSource ambientAudioSource;
+        [Header("Theme Lighting")]
+        [SerializeField] private Light[] cabinetLights;
         [Header("Button/Lever Motion")]
         [SerializeField] private Transform spinControlVisual;
         [SerializeField] private Transform nextControlVisual;
@@ -41,6 +43,7 @@ namespace MyCasino.Slots.VR
         [SerializeField, Min(0f)] private float controlHapticDuration = 0.08f;
         [SerializeField, Range(0f, 1f)] private float winHapticAmplitude = 0.7f;
         [SerializeField, Min(0f)] private float winHapticDuration = 0.18f;
+        private Coroutine _lightPulseRoutine;
 
         private void OnEnable()
         {
@@ -98,6 +101,12 @@ namespace MyCasino.Slots.VR
             if (machine != null)
             {
                 machine.OnSpinFinished -= HandleSpinFinished;
+            }
+
+            if (_lightPulseRoutine != null)
+            {
+                StopCoroutine(_lightPulseRoutine);
+                _lightPulseRoutine = null;
             }
         }
 
@@ -188,6 +197,7 @@ namespace MyCasino.Slots.VR
                 TriggerCabinetAnimation(winTriggerName);
                 SendHapticsToSelectingInteractors(spinControl, winHapticAmplitude, winHapticDuration);
                 PlayControlClip(GetCurrentSlotDefinition()?.WinStingerSfx);
+                PulseThemeLights(result);
             }
 
             RefreshHud();
@@ -218,6 +228,7 @@ namespace MyCasino.Slots.VR
 
             if (ambientAudioSource == null)
             {
+                ApplyThemeLights(definition);
                 return;
             }
 
@@ -234,6 +245,8 @@ namespace MyCasino.Slots.VR
                 ambientAudioSource.loop = true;
                 ambientAudioSource.Play();
             }
+
+            ApplyThemeLights(definition);
         }
 
         private void PlayControlClip(AudioClip clip)
@@ -244,6 +257,88 @@ namespace MyCasino.Slots.VR
             }
 
             controlAudioSource.PlayOneShot(clip);
+        }
+
+        private void ApplyThemeLights(VideoSlotDefinition definition)
+        {
+            if (cabinetLights == null || cabinetLights.Length == 0 || definition == null)
+            {
+                return;
+            }
+
+            foreach (var lightRef in cabinetLights)
+            {
+                if (lightRef == null)
+                {
+                    continue;
+                }
+
+                lightRef.color = definition.ThemeLightColor;
+                lightRef.intensity = definition.ThemeBaseLightIntensity;
+            }
+        }
+
+        private void PulseThemeLights(SlotSpinResult result)
+        {
+            var definition = GetCurrentSlotDefinition();
+            if (definition == null || cabinetLights == null || cabinetLights.Length == 0)
+            {
+                return;
+            }
+
+            if (_lightPulseRoutine != null)
+            {
+                StopCoroutine(_lightPulseRoutine);
+            }
+
+            _lightPulseRoutine = StartCoroutine(PulseThemeLightsRoutine(definition, result));
+        }
+
+        private IEnumerator PulseThemeLightsRoutine(VideoSlotDefinition definition, SlotSpinResult result)
+        {
+            var payoutFactor = machine != null && machine.CurrentBet > 0
+                ? Mathf.Clamp(result.TotalWinAmount / (float)machine.CurrentBet, 1f, 10f)
+                : 1f;
+
+            var peakIntensity = Mathf.Lerp(
+                definition.ThemeBaseLightIntensity,
+                definition.ThemeWinLightIntensity,
+                Mathf.Clamp01(payoutFactor / 10f));
+
+            var elapsed = 0f;
+            while (elapsed < definition.ThemeLightPulseDuration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / definition.ThemeLightPulseDuration);
+                SetLightIntensity(Mathf.Lerp(definition.ThemeBaseLightIntensity, peakIntensity, t), definition.ThemeLightColor);
+                yield return null;
+            }
+
+            elapsed = 0f;
+            while (elapsed < definition.ThemeLightPulseDuration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / definition.ThemeLightPulseDuration);
+                SetLightIntensity(Mathf.Lerp(peakIntensity, definition.ThemeBaseLightIntensity, t), definition.ThemeLightColor);
+                yield return null;
+            }
+
+            SetLightIntensity(definition.ThemeBaseLightIntensity, definition.ThemeLightColor);
+            _lightPulseRoutine = null;
+        }
+
+        private void SetLightIntensity(float intensity, Color color)
+        {
+            foreach (var lightRef in cabinetLights)
+            {
+                if (lightRef == null)
+                {
+                    continue;
+                }
+
+                lightRef.color = color;
+                lightRef.intensity = intensity;
+            }
         }
 
         private void AnimateControlPress(Transform visual)

@@ -43,6 +43,11 @@ namespace MyCasino.Slots.Data
         [field: SerializeField] public AudioClip ButtonPressSfx { get; private set; }
         [field: SerializeField] public AudioClip WinStingerSfx { get; private set; }
         [field: SerializeField] public AudioClip AmbientLoopSfx { get; private set; }
+        [field: Header("Cabinet Lighting")]
+        [field: SerializeField] public Color ThemeLightColor { get; private set; } = Color.cyan;
+        [field: SerializeField, Min(0f)] public float ThemeBaseLightIntensity { get; private set; } = 1.2f;
+        [field: SerializeField, Min(0f)] public float ThemeWinLightIntensity { get; private set; } = 3f;
+        [field: SerializeField, Min(0.01f)] public float ThemeLightPulseDuration { get; private set; } = 0.35f;
 
         public bool IsValid => Symbols != null && Symbols.Count > 0 && ReelCount > 0 && RowCount > 0;
     }
