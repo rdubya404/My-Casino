@@ -54,6 +54,9 @@ Each slot should have:
    - colliders + `XRSimpleInteractable` on each physical control
    - `QuestPhysicalSlotConsole` on the console root
    - assign spin / next slot / previous slot controls
+   - assign optional cabinet `Animator` trigger names for spin/next/previous/win pulses
+   - assign optional visual transforms for press animation and tune press depth/duration
+   - tune haptic amplitude/duration for control press and win feedback
    - assign optional in-world text labels for selected slot, credits, and result
 8. (Optional legacy UI) Add a world-space canvas panel with:
    - `QuestSlotSelectorPanel`
@@ -112,4 +115,4 @@ Gesture thresholds are configurable in the component:
 
 ## Next recommended upgrades
 
-- Add cabinet animations and haptics tied to lever pulls and button presses.
+- Add bespoke animation clips and audio layers per slot theme for richer cabinet personality.

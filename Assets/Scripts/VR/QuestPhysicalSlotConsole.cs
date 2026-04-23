@@ -1,4 +1,5 @@
 using MyCasino.Slots.Core;
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
@@ -19,22 +20,39 @@ namespace MyCasino.Slots.VR
         [SerializeField] private TextMeshPro selectedSlotText;
         [SerializeField] private TextMeshPro creditsText;
         [SerializeField] private TextMeshPro resultText;
+        [Header("Cabinet Animation")]
+        [SerializeField] private Animator cabinetAnimator;
+        [SerializeField] private string spinTriggerName = "SpinPulled";
+        [SerializeField] private string nextTriggerName = "NextPressed";
+        [SerializeField] private string previousTriggerName = "PrevPressed";
+        [SerializeField] private string winTriggerName = "WinPulse";
+        [Header("Button/Lever Motion")]
+        [SerializeField] private Transform spinControlVisual;
+        [SerializeField] private Transform nextControlVisual;
+        [SerializeField] private Transform previousControlVisual;
+        [SerializeField, Min(0.002f)] private float controlPressDepth = 0.02f;
+        [SerializeField, Min(0.01f)] private float controlPressDuration = 0.08f;
+        [Header("Haptics")]
+        [SerializeField, Range(0f, 1f)] private float controlHapticAmplitude = 0.45f;
+        [SerializeField, Min(0f)] private float controlHapticDuration = 0.08f;
+        [SerializeField, Range(0f, 1f)] private float winHapticAmplitude = 0.7f;
+        [SerializeField, Min(0f)] private float winHapticDuration = 0.18f;
 
         private void OnEnable()
         {
             if (spinControl != null)
             {
-                spinControl.selectEntered.AddListener(_ => TrySpin());
+                spinControl.selectEntered.AddListener(HandleSpinControlSelected);
             }
 
             if (nextSlotControl != null)
             {
-                nextSlotControl.selectEntered.AddListener(_ => SelectNextSlot());
+                nextSlotControl.selectEntered.AddListener(HandleNextControlSelected);
             }
 
             if (previousSlotControl != null)
             {
-                previousSlotControl.selectEntered.AddListener(_ => SelectPreviousSlot());
+                previousSlotControl.selectEntered.AddListener(HandlePreviousControlSelected);
             }
 
             if (lobby != null)
@@ -123,6 +141,30 @@ namespace MyCasino.Slots.VR
             RefreshHud();
         }
 
+        private void HandleSpinControlSelected(SelectEnterEventArgs args)
+        {
+            TriggerCabinetAnimation(spinTriggerName);
+            AnimateControlPress(spinControlVisual);
+            SendHaptics(args, controlHapticAmplitude, controlHapticDuration);
+            TrySpin();
+        }
+
+        private void HandleNextControlSelected(SelectEnterEventArgs args)
+        {
+            TriggerCabinetAnimation(nextTriggerName);
+            AnimateControlPress(nextControlVisual);
+            SendHaptics(args, controlHapticAmplitude, controlHapticDuration);
+            SelectNextSlot();
+        }
+
+        private void HandlePreviousControlSelected(SelectEnterEventArgs args)
+        {
+            TriggerCabinetAnimation(previousTriggerName);
+            AnimateControlPress(previousControlVisual);
+            SendHaptics(args, controlHapticAmplitude, controlHapticDuration);
+            SelectPreviousSlot();
+        }
+
         private void HandleSpinFinished(SlotSpinResult result)
         {
             if (resultText != null)
@@ -132,7 +174,85 @@ namespace MyCasino.Slots.VR
                     : "No win";
             }
 
+            if (result.TotalWinAmount > 0)
+            {
+                TriggerCabinetAnimation(winTriggerName);
+                SendHapticsToSelectingInteractors(spinControl, winHapticAmplitude, winHapticDuration);
+            }
+
             RefreshHud();
+        }
+
+        private void TriggerCabinetAnimation(string triggerName)
+        {
+            if (cabinetAnimator == null || string.IsNullOrWhiteSpace(triggerName))
+            {
+                return;
+            }
+
+            cabinetAnimator.SetTrigger(triggerName);
+        }
+
+        private void AnimateControlPress(Transform visual)
+        {
+            if (visual == null)
+            {
+                return;
+            }
+
+            StartCoroutine(PressControlRoutine(visual));
+        }
+
+        private IEnumerator PressControlRoutine(Transform visual)
+        {
+            var originalLocalPosition = visual.localPosition;
+            var pressedLocalPosition = originalLocalPosition + Vector3.back * controlPressDepth;
+            var elapsed = 0f;
+
+            while (elapsed < controlPressDuration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / controlPressDuration);
+                visual.localPosition = Vector3.Lerp(originalLocalPosition, pressedLocalPosition, t);
+                yield return null;
+            }
+
+            elapsed = 0f;
+            while (elapsed < controlPressDuration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / controlPressDuration);
+                visual.localPosition = Vector3.Lerp(pressedLocalPosition, originalLocalPosition, t);
+                yield return null;
+            }
+
+            visual.localPosition = originalLocalPosition;
+        }
+
+        private static void SendHaptics(SelectEnterEventArgs args, float amplitude, float duration)
+        {
+            if (args?.interactorObject is not XRBaseControllerInteractor controllerInteractor || controllerInteractor.xrController == null)
+            {
+                return;
+            }
+
+            controllerInteractor.xrController.SendHapticImpulse(amplitude, duration);
+        }
+
+        private static void SendHapticsToSelectingInteractors(XRSimpleInteractable interactable, float amplitude, float duration)
+        {
+            if (interactable == null)
+            {
+                return;
+            }
+
+            foreach (var interactor in interactable.interactorsSelecting)
+            {
+                if (interactor is XRBaseControllerInteractor controllerInteractor && controllerInteractor.xrController != null)
+                {
+                    controllerInteractor.xrController.SendHapticImpulse(amplitude, duration);
+                }
+            }
         }
 
         private void RefreshHud()
