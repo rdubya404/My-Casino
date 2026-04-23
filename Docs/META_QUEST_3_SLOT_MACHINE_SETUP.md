@@ -2,6 +2,8 @@
 
 This project includes a Unity-ready architecture for a VR slot machine experience tailored for **Meta Quest 3**.
 
+For full visual/content guidance across all 8 themes, use `Docs/ASSET_BIBLE_8_SLOT_THEMES.md`.
+
 ## Included gameplay systems
 
 - `VideoSlotMachine`: weighted reel spin logic, payout calculation, and credit balance.
