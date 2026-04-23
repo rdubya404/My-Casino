@@ -69,9 +69,19 @@ Each slot should have:
   - `bet * payoutMultiplier * (streak - 2)`
 - `VideoSlotDefinition.Paylines` can override defaults with custom line paths (one row index per reel).
 
+## Free spins and bonus mini-game
+
+- Free spins:
+  - Triggered by landing `FreeSpinTriggerCount` or more `FreeSpinTriggerSymbolId` symbols anywhere in the grid.
+  - Awards `FreeSpinAwardCount` spins.
+  - Free spins do not consume credits.
+- Bonus mini-game:
+  - Triggered by landing `BonusTriggerCount` or more `BonusTriggerSymbolId` symbols anywhere in the grid.
+  - Runs a simple random bonus-pick simulation that awards `bet * randomMultiplier`.
+  - Multiplier range is controlled by `BonusPayoutMultiplierMin` and `BonusPayoutMultiplierMax`.
+
 ## Next recommended upgrades
 
-- Add free spins and bonus mini-games.
 - Add progressive jackpot tracking.
 - Add hand-tracking gestures for spin and slot selection.
 - Replace temporary UI buttons with physical in-world VR controls.

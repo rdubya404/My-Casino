@@ -72,12 +72,27 @@ namespace MyCasino.Slots.VR
         {
             if (resultText != null)
             {
-                resultText.text = result.WinAmount > 0
-                    ? $"WIN +{result.WinAmount}"
-                    : "No win";
+                if (result.TotalWinAmount > 0)
+                {
+                    resultText.text = $"WIN +{result.TotalWinAmount}";
+                }
+                else
+                {
+                    resultText.text = "No win";
+                }
+
+                if (result.FreeSpinsAwarded > 0)
+                {
+                    resultText.text += $" | Free Spins +{result.FreeSpinsAwarded}";
+                }
+
+                if (result.BonusTriggered)
+                {
+                    resultText.text += $" | Bonus +{result.BonusWinAmount}";
+                }
             }
 
-            if (uiAudioSource != null && result.WinAmount > 0 && machine.Definition.WinSfx != null)
+            if (uiAudioSource != null && result.TotalWinAmount > 0 && machine.Definition.WinSfx != null)
             {
                 uiAudioSource.PlayOneShot(machine.Definition.WinSfx);
             }
@@ -89,7 +104,7 @@ namespace MyCasino.Slots.VR
         {
             if (creditsText != null && machine != null)
             {
-                creditsText.text = $"Credits: {machine.Credits}";
+                creditsText.text = $"Credits: {machine.Credits} | Free Spins: {machine.FreeSpinsRemaining}";
             }
         }
     }

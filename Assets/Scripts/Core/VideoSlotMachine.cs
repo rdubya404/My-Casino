@@ -15,13 +15,17 @@ namespace MyCasino.Slots.Core
 
         private readonly List<float> _weightLookup = new();
         private bool _isSpinning;
+        private int _freeSpinsRemaining;
 
         public event Action<VideoSlotMachine> OnSpinStarted;
         public event Action<SlotSpinResult> OnSpinFinished;
+        public event Action<VideoSlotMachine> OnBonusMiniGameStarted;
+        public event Action<int> OnBonusMiniGameFinished;
 
         public int Credits { get; private set; }
         public int CurrentBet => definition != null ? definition.BetUnit : 0;
         public VideoSlotDefinition Definition => definition;
+        public int FreeSpinsRemaining => _freeSpinsRemaining;
 
         private void Awake()
         {
@@ -33,18 +37,33 @@ namespace MyCasino.Slots.Core
         {
             definition = slotDefinition;
             Credits = Mathf.Max(0, carryCredits);
+            _freeSpinsRemaining = 0;
             RebuildWeightLookup();
         }
 
         public bool TrySpin()
         {
-            if (_isSpinning || definition == null || !definition.IsValid || Credits < CurrentBet)
+            if (_isSpinning || definition == null || !definition.IsValid)
             {
                 return false;
             }
 
-            Credits -= CurrentBet;
-            StartCoroutine(SpinRoutine());
+            if (_freeSpinsRemaining <= 0 && Credits < CurrentBet)
+            {
+                return false;
+            }
+
+            var usingFreeSpin = _freeSpinsRemaining > 0;
+            if (usingFreeSpin)
+            {
+                _freeSpinsRemaining--;
+            }
+            else
+            {
+                Credits -= CurrentBet;
+            }
+
+            StartCoroutine(SpinRoutine(usingFreeSpin));
             return true;
         }
 
@@ -53,7 +72,7 @@ namespace MyCasino.Slots.Core
             Credits = Mathf.Max(0, Credits + amount);
         }
 
-        private IEnumerator SpinRoutine()
+        private IEnumerator SpinRoutine(bool usedFreeSpin)
         {
             _isSpinning = true;
             OnSpinStarted?.Invoke(this);
@@ -71,10 +90,35 @@ namespace MyCasino.Slots.Core
                 yield return new WaitForSeconds(reelStopDelay);
             }
 
-            var win = CalculateWin(grid);
-            Credits += win;
+            var lineWin = CalculateWin(grid);
+            var awardedFreeSpins = GetAwardedFreeSpins(grid);
+            var bonusTriggered = IsBonusTriggered(grid);
+            var bonusWin = 0;
 
-            var result = new SlotSpinResult(definition.SlotId, CurrentBet, win, grid);
+            if (awardedFreeSpins > 0)
+            {
+                _freeSpinsRemaining += awardedFreeSpins;
+            }
+
+            if (bonusTriggered)
+            {
+                OnBonusMiniGameStarted?.Invoke(this);
+                yield return new WaitForSeconds(0.5f);
+                bonusWin = PlayBonusMiniGame();
+                OnBonusMiniGameFinished?.Invoke(bonusWin);
+            }
+
+            Credits += lineWin + bonusWin;
+
+            var result = new SlotSpinResult(
+                definition.SlotId,
+                CurrentBet,
+                lineWin,
+                bonusWin,
+                awardedFreeSpins,
+                bonusTriggered,
+                usedFreeSpin,
+                grid);
             OnSpinFinished?.Invoke(result);
             _isSpinning = false;
         }
@@ -138,6 +182,55 @@ namespace MyCasino.Slots.Core
             }
 
             return win;
+        }
+
+        private int GetAwardedFreeSpins(string[,] grid)
+        {
+            if (string.IsNullOrWhiteSpace(definition.FreeSpinTriggerSymbolId))
+            {
+                return 0;
+            }
+
+            var matches = CountSymbol(grid, definition.FreeSpinTriggerSymbolId);
+            return matches >= definition.FreeSpinTriggerCount
+                ? definition.FreeSpinAwardCount
+                : 0;
+        }
+
+        private bool IsBonusTriggered(string[,] grid)
+        {
+            if (string.IsNullOrWhiteSpace(definition.BonusTriggerSymbolId))
+            {
+                return false;
+            }
+
+            var matches = CountSymbol(grid, definition.BonusTriggerSymbolId);
+            return matches >= definition.BonusTriggerCount;
+        }
+
+        private int PlayBonusMiniGame()
+        {
+            var min = Mathf.Min(definition.BonusPayoutMultiplierMin, definition.BonusPayoutMultiplierMax);
+            var max = Mathf.Max(definition.BonusPayoutMultiplierMin, definition.BonusPayoutMultiplierMax);
+            var selectedMultiplier = UnityEngine.Random.Range(min, max + 1);
+            return CurrentBet * selectedMultiplier;
+        }
+
+        private int CountSymbol(string[,] grid, string symbolId)
+        {
+            var matches = 0;
+            for (var reel = 0; reel < definition.ReelCount; reel++)
+            {
+                for (var row = 0; row < definition.RowCount; row++)
+                {
+                    if (grid[reel, row] == symbolId)
+                    {
+                        matches++;
+                    }
+                }
+            }
+
+            return matches;
         }
 
         private IEnumerable<int[]> GetActivePaylines()

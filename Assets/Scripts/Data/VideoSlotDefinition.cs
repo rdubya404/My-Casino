@@ -23,6 +23,15 @@ namespace MyCasino.Slots.Data
         [field: SerializeField, Min(1)] public int RowCount { get; private set; } = 3;
         [field: SerializeField] public List<SlotSymbol> Symbols { get; private set; } = new();
         [field: SerializeField] public List<PaylinePattern> Paylines { get; private set; } = new();
+        [field: Header("Free Spins")]
+        [field: SerializeField] public string FreeSpinTriggerSymbolId { get; private set; } = "scatter";
+        [field: SerializeField, Min(1)] public int FreeSpinTriggerCount { get; private set; } = 3;
+        [field: SerializeField, Min(1)] public int FreeSpinAwardCount { get; private set; } = 5;
+        [field: Header("Bonus Mini-Game")]
+        [field: SerializeField] public string BonusTriggerSymbolId { get; private set; } = "bonus";
+        [field: SerializeField, Min(1)] public int BonusTriggerCount { get; private set; } = 3;
+        [field: SerializeField, Min(1)] public int BonusPayoutMultiplierMin { get; private set; } = 2;
+        [field: SerializeField, Min(1)] public int BonusPayoutMultiplierMax { get; private set; } = 8;
 
         public bool IsValid => Symbols != null && Symbols.Count > 0 && ReelCount > 0 && RowCount > 0;
     }
