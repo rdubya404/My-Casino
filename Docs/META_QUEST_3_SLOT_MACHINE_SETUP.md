@@ -50,13 +50,18 @@ Each slot should have:
    - collider
    - `XRSimpleInteractable`
    - `QuestSpinInteractor`
-7. Add a world-space canvas panel with:
+7. Add a physical in-world slot console (lever/buttons) with:
+   - colliders + `XRSimpleInteractable` on each physical control
+   - `QuestPhysicalSlotConsole` on the console root
+   - assign spin / next slot / previous slot controls
+   - assign optional in-world text labels for selected slot, credits, and result
+8. (Optional legacy UI) Add a world-space canvas panel with:
    - `QuestSlotSelectorPanel`
    - button template + container root
-8. (Optional hand tracking) Add an input controller GameObject with:
+9. (Optional hand tracking) Add an input controller GameObject with:
    - `QuestHandGestureController`
    - references to `VideoSlotMachine` and `SlotLobbyManager`
-9. Build Settings:
+10. Build Settings:
    - Platform: Android
    - Texture Compression: ASTC
    - Target Device: Quest 3
@@ -107,4 +112,4 @@ Gesture thresholds are configurable in the component:
 
 ## Next recommended upgrades
 
-- Replace temporary UI buttons with physical in-world VR controls.
+- Add cabinet animations and haptics tied to lever pulls and button presses.
