@@ -37,6 +37,12 @@ namespace MyCasino.Slots.Data
         [field: SerializeField, Range(0f, 1f)] public float ProgressiveContributionPercent { get; private set; } = 0.05f;
         [field: SerializeField] public string JackpotTriggerSymbolId { get; private set; } = "jackpot";
         [field: SerializeField, Min(1)] public int JackpotTriggerCount { get; private set; } = 5;
+        [field: Header("Cabinet Personality")]
+        [field: SerializeField] public AnimatorOverrideController ThemeAnimatorOverride { get; private set; }
+        [field: SerializeField] public AudioClip LeverPullSfx { get; private set; }
+        [field: SerializeField] public AudioClip ButtonPressSfx { get; private set; }
+        [field: SerializeField] public AudioClip WinStingerSfx { get; private set; }
+        [field: SerializeField] public AudioClip AmbientLoopSfx { get; private set; }
 
         public bool IsValid => Symbols != null && Symbols.Count > 0 && ReelCount > 0 && RowCount > 0;
     }

@@ -1,4 +1,5 @@
 using MyCasino.Slots.Core;
+using MyCasino.Slots.Data;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -26,6 +27,9 @@ namespace MyCasino.Slots.VR
         [SerializeField] private string nextTriggerName = "NextPressed";
         [SerializeField] private string previousTriggerName = "PrevPressed";
         [SerializeField] private string winTriggerName = "WinPulse";
+        [Header("Theme Audio Layers")]
+        [SerializeField] private AudioSource controlAudioSource;
+        [SerializeField] private AudioSource ambientAudioSource;
         [Header("Button/Lever Motion")]
         [SerializeField] private Transform spinControlVisual;
         [SerializeField] private Transform nextControlVisual;
@@ -66,6 +70,7 @@ namespace MyCasino.Slots.VR
             }
 
             RefreshHud();
+            ApplyCurrentSlotPresentation();
         }
 
         private void OnDisable()
@@ -138,6 +143,7 @@ namespace MyCasino.Slots.VR
 
         private void HandleSlotSelectionChanged(int _)
         {
+            ApplyCurrentSlotPresentation();
             RefreshHud();
         }
 
@@ -146,6 +152,7 @@ namespace MyCasino.Slots.VR
             TriggerCabinetAnimation(spinTriggerName);
             AnimateControlPress(spinControlVisual);
             SendHaptics(args, controlHapticAmplitude, controlHapticDuration);
+            PlayControlClip(GetCurrentSlotDefinition()?.LeverPullSfx);
             TrySpin();
         }
 
@@ -154,6 +161,7 @@ namespace MyCasino.Slots.VR
             TriggerCabinetAnimation(nextTriggerName);
             AnimateControlPress(nextControlVisual);
             SendHaptics(args, controlHapticAmplitude, controlHapticDuration);
+            PlayControlClip(GetCurrentSlotDefinition()?.ButtonPressSfx);
             SelectNextSlot();
         }
 
@@ -162,6 +170,7 @@ namespace MyCasino.Slots.VR
             TriggerCabinetAnimation(previousTriggerName);
             AnimateControlPress(previousControlVisual);
             SendHaptics(args, controlHapticAmplitude, controlHapticDuration);
+            PlayControlClip(GetCurrentSlotDefinition()?.ButtonPressSfx);
             SelectPreviousSlot();
         }
 
@@ -178,6 +187,7 @@ namespace MyCasino.Slots.VR
             {
                 TriggerCabinetAnimation(winTriggerName);
                 SendHapticsToSelectingInteractors(spinControl, winHapticAmplitude, winHapticDuration);
+                PlayControlClip(GetCurrentSlotDefinition()?.WinStingerSfx);
             }
 
             RefreshHud();
@@ -191,6 +201,49 @@ namespace MyCasino.Slots.VR
             }
 
             cabinetAnimator.SetTrigger(triggerName);
+        }
+
+        private void ApplyCurrentSlotPresentation()
+        {
+            var definition = GetCurrentSlotDefinition();
+            if (definition == null)
+            {
+                return;
+            }
+
+            if (cabinetAnimator != null && definition.ThemeAnimatorOverride != null)
+            {
+                cabinetAnimator.runtimeAnimatorController = definition.ThemeAnimatorOverride;
+            }
+
+            if (ambientAudioSource == null)
+            {
+                return;
+            }
+
+            if (definition.AmbientLoopSfx == null)
+            {
+                ambientAudioSource.Stop();
+                ambientAudioSource.clip = null;
+                return;
+            }
+
+            if (ambientAudioSource.clip != definition.AmbientLoopSfx)
+            {
+                ambientAudioSource.clip = definition.AmbientLoopSfx;
+                ambientAudioSource.loop = true;
+                ambientAudioSource.Play();
+            }
+        }
+
+        private void PlayControlClip(AudioClip clip)
+        {
+            if (clip == null || controlAudioSource == null)
+            {
+                return;
+            }
+
+            controlAudioSource.PlayOneShot(clip);
         }
 
         private void AnimateControlPress(Transform visual)
@@ -266,6 +319,16 @@ namespace MyCasino.Slots.VR
             {
                 creditsText.text = $"Credits: {machine.Credits} | Free: {machine.FreeSpinsRemaining} | Jackpot: {machine.ProgressiveJackpotPool}";
             }
+        }
+
+        private VideoSlotDefinition GetCurrentSlotDefinition()
+        {
+            if (lobby == null || lobby.VideoSlots.Count == 0 || lobby.SelectedIndex < 0 || lobby.SelectedIndex >= lobby.VideoSlots.Count)
+            {
+                return null;
+            }
+
+            return lobby.VideoSlots[lobby.SelectedIndex];
         }
     }
 }

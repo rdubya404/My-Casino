@@ -58,6 +58,7 @@ Each slot should have:
    - assign optional visual transforms for press animation and tune press depth/duration
    - tune haptic amplitude/duration for control press and win feedback
    - assign optional in-world text labels for selected slot, credits, and result
+   - assign `controlAudioSource` and `ambientAudioSource` for per-theme audio layers
 8. (Optional legacy UI) Add a world-space canvas panel with:
    - `QuestSlotSelectorPanel`
    - button template + container root
@@ -113,6 +114,18 @@ Gesture thresholds are configurable in the component:
 - `Swipe Distance Threshold`
 - `Spin Cooldown Seconds`
 
+## Per-theme cabinet personality (animation + audio)
+
+Each `VideoSlotDefinition` now supports bespoke presentation overrides:
+
+- `ThemeAnimatorOverride`: per-theme animator override controller for cabinet animation clips.
+- `LeverPullSfx`: control SFX for spin lever interactions.
+- `ButtonPressSfx`: control SFX for next/previous slot buttons.
+- `WinStingerSfx`: celebratory hit when a spin pays out.
+- `AmbientLoopSfx`: looping cabinet ambience for the active slot theme.
+
+`QuestPhysicalSlotConsole` automatically applies these when slot selection changes.
+
 ## Next recommended upgrades
 
-- Add bespoke animation clips and audio layers per slot theme for richer cabinet personality.
+- Add dynamic cabinet lighting presets linked to slot theme and payout intensity.
